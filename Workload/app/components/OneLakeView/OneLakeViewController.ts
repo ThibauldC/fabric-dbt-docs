@@ -27,21 +27,48 @@ export async function getTables(
     workspaceId: string,
     itemId: string
 ): Promise<TableMetadata[]> {
+    console.log('🔍 [OneLakeViewController.getTables] Called with:', {
+        workspaceId,
+        itemId
+    });
+    
     const directory = `${itemId}/Tables/`;
     const oneLakeStorageClient = new OneLakeStorageClient(workloadClient);
-    const oneLakeContainer = await oneLakeStorageClient.getPathMetadata(workspaceId, directory, true);
-    const deltaLogDirectory = "/_delta_log";
-    const tables = (oneLakeContainer.paths || [])
-        .filter(path =>
-            path.name.endsWith(deltaLogDirectory) ||
-            (path.isShortcut && 
-                (path.accountType === "ADLS" || path.accountType === "ExternalADLS"))
-        )
-        .map(path => {
-            return convertToTableMetadata(path, deltaLogDirectory);
+    
+    try {
+        console.log('🔍 [OneLakeViewController.getTables] Calling getPathMetadata for directory:', directory);
+        const oneLakeContainer = await oneLakeStorageClient.getPathMetadata(workspaceId, directory, true);
+        
+        console.log('🔍 [OneLakeViewController.getTables] getPathMetadata returned:', {
+            pathCount: oneLakeContainer.paths?.length || 0
         });
+        
+        const deltaLogDirectory = "/_delta_log";
+        const tables = (oneLakeContainer.paths || [])
+            .filter(path =>
+                path.name.endsWith(deltaLogDirectory) ||
+                (path.isShortcut && 
+                    (path.accountType === "ADLS" || path.accountType === "ExternalADLS"))
+            )
+            .map(path => {
+                return convertToTableMetadata(path, deltaLogDirectory);
+            });
 
-    return tables;
+        console.log('🔍 [OneLakeViewController.getTables] Success:', {
+            tableCount: tables.length
+        });
+        
+        return tables;
+    } catch (error) {
+        console.error('🔍 [OneLakeViewController.getTables] FAILED:', {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            workspaceId,
+            itemId,
+            directory
+        });
+        throw error;
+    }
 }
 
 function convertToTableMetadata(path: OneLakeStoragePathMetadata, deltaLogDirectory: string): TableMetadata {
@@ -93,14 +120,41 @@ export async function getFiles(
     workspaceId: string,
     itemId: string
 ): Promise<FileMetadata[]> {
+    console.log('🔍 [OneLakeViewController.getFiles] Called with:', {
+        workspaceId,
+        itemId
+    });
+    
     const directory = `${itemId}/Files/`;
     const oneLakeStorageClient = new OneLakeStorageClient(workloadClient);
-    const oneLakeContainer = await oneLakeStorageClient.getPathMetadata(workspaceId, directory, true);
-    const files = (oneLakeContainer.paths || []).map(path => {
-        return convertToFileMetadata(path, directory);
-    });
+    
+    try {
+        console.log('🔍 [OneLakeViewController.getFiles] Calling getPathMetadata for directory:', directory);
+        const oneLakeContainer = await oneLakeStorageClient.getPathMetadata(workspaceId, directory, true);
+        
+        console.log('🔍 [OneLakeViewController.getFiles] getPathMetadata returned:', {
+            pathCount: oneLakeContainer.paths?.length || 0
+        });
+        
+        const files = (oneLakeContainer.paths || []).map(path => {
+            return convertToFileMetadata(path, directory);
+        });
 
-    return files;
+        console.log('🔍 [OneLakeViewController.getFiles] Success:', {
+            fileCount: files.length
+        });
+        
+        return files;
+    } catch (error) {
+        console.error('🔍 [OneLakeViewController.getFiles] FAILED:', {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            workspaceId,
+            itemId,
+            directory
+        });
+        throw error;
+    }
 }
 
 function convertToFileMetadata(path: OneLakeStoragePathMetadata, directory: string) {

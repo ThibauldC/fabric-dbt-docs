@@ -70,18 +70,40 @@ export function OneLakeView(props: OneLakeViewProps) {
   const [openTablesMenu, setOpenTablesMenu] = useState<boolean>(false);
 
   const loadItemData = async (): Promise<void> => {
+    console.log('🔍 [OneLakeView.loadItemData] Starting data load for item:', {
+      itemId: selectedItem?.id,
+      workspaceId: selectedItem?.workspaceId,
+      displayName: selectedItem?.displayName
+    });
+    
     setLoadingStatus("loading");
     let success = false;
     try {
       success = await setTablesAndFiles(null);
     } catch (exception) {
+      console.error('🔍 [OneLakeView.loadItemData] First attempt failed:', {
+        error: exception instanceof Error ? exception.message : String(exception),
+        stack: exception instanceof Error ? exception.stack : undefined
+      });
+      
       try {
+        console.log('🔍 [OneLakeView.loadItemData] Retrying with .default schema...');
         success = await setTablesAndFiles(".default");
       } catch (secondException) {
-        console.error("OneLakeView: Failed to load data for item:", selectedItem, secondException);
+        console.error("🔍 [OneLakeView.loadItemData] Second attempt failed:", {
+          item: selectedItem,
+          error: secondException instanceof Error ? secondException.message : String(secondException),
+          stack: secondException instanceof Error ? secondException.stack : undefined
+        });
         success = false;
       }
     }
+    
+    console.log('🔍 [OneLakeView.loadItemData] Load completed:', {
+      success,
+      status: success ? "idle" : "error"
+    });
+    
     setLoadingStatus(success ? "idle" : "error");
   };
 
@@ -115,18 +137,30 @@ export function OneLakeView(props: OneLakeViewProps) {
   }, [props.config.refreshTrigger, selectedItem]);
 
   async function setTablesAndFiles(additionalScopesToConsent: string): Promise<boolean> {
+    console.log('🔍 [OneLakeView.setTablesAndFiles] Starting fetch...', {
+      itemId: selectedItem?.id,
+      workspaceId: selectedItem?.workspaceId,
+      additionalScopes: additionalScopesToConsent
+    });
+    
     try {
       if (!selectedItem || !selectedItem.workspaceId || !selectedItem.id) {
-        console.error("OneLakeView: Cannot fetch data - selectedItem is invalid:", selectedItem);
+        console.error("🔍 [OneLakeView.setTablesAndFiles] Cannot fetch data - selectedItem is invalid:", selectedItem);
         return false;
       }
 
-      console.log(`Fetching tables and files for item: ${selectedItem.id} in workspace: ${selectedItem.workspaceId}`);
+      console.log(`🔍 [OneLakeView.setTablesAndFiles] Fetching tables and files for item: ${selectedItem.id} in workspace: ${selectedItem.workspaceId}`);
+      
+      console.log('🔍 [OneLakeView.setTablesAndFiles] Calling getTables...');
       let tables = await getTables(props.workloadClient, selectedItem.workspaceId, selectedItem.id);
+      console.log('🔍 [OneLakeView.setTablesAndFiles] getTables completed:', { tableCount: tables?.length });
+      
+      console.log('🔍 [OneLakeView.setTablesAndFiles] Calling getFiles...');
       let files = await getFiles(props.workloadClient, selectedItem.workspaceId, selectedItem.id);
+      console.log('🔍 [OneLakeView.setTablesAndFiles] getFiles completed:', { fileCount: files?.length });
 
       if (tables && files) {
-        console.log(`Loaded ${tables.length} tables and ${files.length} files`);
+        console.log(`🔍 [OneLakeView.setTablesAndFiles] Successfully loaded ${tables.length} tables and ${files.length} files`);
         setTablesInItem(tables);
         setFilesInItem(files);
         setHasSchema(tables[0]?.schema != null);
@@ -134,9 +168,16 @@ export function OneLakeView(props: OneLakeViewProps) {
         setSelectedTablePath(null);
         setSelectedFilePath(null);
         return true;
+      } else {
+        console.warn('🔍 [OneLakeView.setTablesAndFiles] Tables or files came back null/undefined');
       }
     } catch (error) {
-      console.error("OneLakeView: Error fetching tables and files:", error);
+      console.error("🔍 [OneLakeView.setTablesAndFiles] Error fetching tables and files:", {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        itemId: selectedItem?.id,
+        workspaceId: selectedItem?.workspaceId
+      });
     }
     return false;
   }

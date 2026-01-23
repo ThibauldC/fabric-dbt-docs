@@ -1,0 +1,18 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g clip-path="url(#clip0_dbt_docs)">
+    <circle cx="100" cy="100" r="100" fill="url(#paint0_dbt_docs)"/>
+    <path d="M66 72C66 66.4772 70.4772 62 76 62H124C129.523 62 134 66.4772 134 72V128C134 133.523 129.523 138 124 138H76C70.4772 138 66 133.523 66 128V72Z" fill="white" fill-opacity="0.7"/>
+    <path d="M79 85H121" stroke="#7A7A7A" stroke-width="6" stroke-linecap="round"/>
+    <path d="M79 100H121" stroke="#7A7A7A" stroke-width="6" stroke-linecap="round"/>
+    <path d="M79 115H108" stroke="#7A7A7A" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <defs>
+    <linearGradient id="paint0_dbt_docs" x1="48" y1="16" x2="154" y2="190" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6F2EC"/>
+      <stop offset="1" stop-color="#E6D9C9"/>
+    </linearGradient>
+    <clipPath id="clip0_dbt_docs">
+      <rect width="200" height="200" fill="white"/>
+    </clipPath>
+  </defs>
+</svg>

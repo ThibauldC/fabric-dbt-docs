@@ -22,7 +22,8 @@
         "customActions": [
         ]},
         "recommendedItemTypes": [
-          "HelloWorld"
+          "HelloWorld",
+          "DbtDocs"
         ]
     },
     "createExperience": {
@@ -44,6 +45,27 @@
             "workspace-plus-new-teams"
           ],
           "itemType": "HelloWorld",
+          "createItemDialogConfig": {
+            "onCreationFailure": { "action": "item.onCreationFailure" },
+            "onCreationSuccess": { "action": "item.onCreationSuccess" }
+          }
+        },
+        {
+          "title": "DbtDocsItem_DisplayName",
+          "description": "DbtDocsItem_Description",
+          "icon": {
+            "name": "assets/images/DbtDocsItem_Icon.png"
+          },
+          "icon_small": {
+            "name": "assets/images/DbtDocsItem_Icon.png"
+          },
+          "availableIn": [
+            "home",
+            "create-hub",
+            "workspace-plus-new",
+            "workspace-plus-new-teams"
+          ],
+          "itemType": "DbtDocs",
           "createItemDialogConfig": {
             "onCreationFailure": { "action": "item.onCreationFailure" },
             "onCreationSuccess": { "action": "item.onCreationSuccess" }

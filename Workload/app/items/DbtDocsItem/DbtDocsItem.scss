@@ -1,0 +1,99 @@
+.dbt-docs-view {
+  width: 100%;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalXL, 16px);
+  padding: var(--spacingVerticalM, 12px);
+  box-sizing: border-box;
+}
+
+.dbt-docs-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalS, 8px);
+  padding: var(--spacingVerticalM, 12px);
+  background: var(--colorNeutralBackground1, #ffffff);
+  border: 1px solid var(--colorNeutralStroke2, #e5e5e5);
+  border-radius: var(--borderRadiusMedium, 6px);
+}
+
+.dbt-docs-section-title {
+  font-size: var(--fontSizeBase500, 20px);
+  font-weight: var(--fontWeightSemibold, 600);
+  margin: 0;
+  color: var(--colorNeutralForeground1, #1a1a1a);
+}
+
+.dbt-docs-section-subtitle {
+  font-size: var(--fontSizeBase300, 14px);
+  font-weight: var(--fontWeightSemibold, 600);
+  margin: 0;
+  color: var(--colorNeutralForeground1, #1a1a1a);
+}
+
+.dbt-docs-section-description {
+  margin: 0;
+  color: var(--colorNeutralForeground2, #4d4d4d);
+  font-size: var(--fontSizeBase300, 14px);
+}
+
+.dbt-docs-save-button {
+  align-self: flex-start;
+}
+
+.dbt-docs-onelake-view {
+  border: 1px solid var(--colorNeutralStroke2, #e5e5e5);
+  border-radius: var(--borderRadiusMedium, 6px);
+  overflow: hidden;
+}
+
+.dbt-docs-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacingHorizontalL, 16px);
+}
+
+.dbt-docs-title {
+  font-size: var(--fontSizeHero700, 28px);
+  font-weight: var(--fontWeightSemibold, 600);
+  margin: 0;
+  color: var(--colorNeutralForeground1, #1a1a1a);
+}
+
+.dbt-docs-subtitle {
+  margin: 4px 0 0;
+  color: var(--colorNeutralForeground2, #4d4d4d);
+  font-size: var(--fontSizeBase300, 14px);
+}
+
+.dbt-docs-status {
+  display: flex;
+  align-items: center;
+  gap: var(--spacingHorizontalM, 12px);
+}
+
+.dbt-docs-error {
+  color: var(--colorPaletteRedForeground1, #c50f1f);
+}
+
+.dbt-docs-preview-card {
+  padding: var(--spacingVerticalL, 16px);
+  border-radius: var(--borderRadiusLarge, 8px);
+  background: var(--colorNeutralBackground1, #ffffff);
+}
+
+.dbt-docs-placeholder {
+  padding: var(--spacingVerticalXL, 24px);
+  text-align: center;
+  color: var(--colorNeutralForeground2, #4d4d4d);
+}
+
+.dbt-docs-frame {
+  width: 100%;
+  min-height: 640px;
+  border: 1px solid var(--colorNeutralStroke2, #e5e5e5);
+  border-radius: var(--borderRadiusMedium, 6px);
+  background: var(--colorNeutralBackground1, #ffffff);
+}

@@ -21,7 +21,7 @@ console.log('*******************************************************************
 
 module.exports = merge(baseConfig, {
     mode: "development",
-    devtool: "source-map",
+    devtool: process.env.CODESPACES ? false : 'source-map',
     cache: {
         type: 'filesystem',
         allowCollectingMemory: true,

@@ -17,7 +17,14 @@ export const TABLE_FOLDER_NAME = "Tables"
 export class OneLakeStorageClient extends FabricPlatformClient {
 
   constructor(workloadClient: WorkloadClientAPI) {
+    console.log('🔍 [OneLakeStorageClient.constructor] Initializing with scope:', FABRIC_BASE_SCOPES.ONELAKE_STORAGE);
+    
+    // 🚨 CRITICAL FIX: OneLake DFS API requires ONLY Azure Storage scope
+    // Cannot combine multiple resource server scopes in one token (audience mismatch)
+    // Token audience MUST be https://storage.azure.com for OneLake DFS API
     super(workloadClient, FABRIC_BASE_SCOPES.ONELAKE_STORAGE);
+    
+    console.log('🔍 [OneLakeStorageClient.constructor] Initialized successfully');
   }
 
   /**
@@ -150,10 +157,62 @@ export class OneLakeStorageClient extends FabricPlatformClient {
     const url = `${EnvironmentConstants.OneLakeDFSBaseUrl}/${filePath}`;
     try {
       const accessToken = await this.getAccessToken();
+      
+      // 🔍 DIAGNOSTIC: Log token details for debugging
+      console.log('🔍 [OneLakeStorageClient] Token acquisition details:', {
+        requestedScopes: `${FABRIC_BASE_SCOPES.ONELAKE_STORAGE} ${FABRIC_BASE_SCOPES.ONELAKE_READ}`,
+        tokenReceived: !!accessToken?.token,
+        tokenLength: accessToken?.token?.length,
+        url: url
+      });
+      
+      // 🔍 DIAGNOSTIC: Decode token to inspect claims (first 3 segments only for safety)
+      if (accessToken?.token) {
+        try {
+          const tokenParts = accessToken.token.split('.');
+          if (tokenParts.length === 3) {
+            const payload = JSON.parse(atob(tokenParts[1]));
+            console.log('🔍 [OneLakeStorageClient] Token claims:', {
+              audience: payload.aud,
+              scopes: payload.scp,
+              appId: payload.appid,
+              userId: payload.oid || payload.sub,
+              upn: payload.upn,
+              expires: payload.exp ? new Date(payload.exp * 1000).toISOString() : 'unknown'
+            });
+          }
+        } catch (decodeError) {
+          console.warn('🔍 [OneLakeStorageClient] Could not decode token:', decodeError);
+        }
+      }
+      
       const response = await fetch(url, {
         headers: { Authorization: `Bearer ${accessToken.token}` }
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      // 🔍 DIAGNOSTIC: Log response details
+      console.log('🔍 [OneLakeStorageClient] Response details:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: {
+          'content-type': response.headers.get('content-type'),
+          'x-ms-request-id': response.headers.get('x-ms-request-id'),
+          'x-ms-error-code': response.headers.get('x-ms-error-code')
+        }
+      });
+      
+      if (!response.ok) {
+        // Try to get error details from response body
+        let errorBody = '';
+        try {
+          errorBody = await response.text();
+          console.error('🔍 [OneLakeStorageClient] Error response body:', errorBody);
+        } catch (e) {
+          console.error('🔍 [OneLakeStorageClient] Could not read error body');
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const content = await response.text();
       console.log(`readFileAsText succeeded for filePath: ${filePath}`);
       return content;
@@ -206,16 +265,93 @@ export class OneLakeStorageClient extends FabricPlatformClient {
     shortcutMetadata = true,
   ): Promise<OneLakeStorageContainerMetadata> {
     const url = `${EnvironmentConstants.OneLakeDFSBaseUrl}/${workspaceId}/?recursive=${recursive}&resource=filesystem&directory=${encodeURIComponent(path)}&getShortcutMetadata=${shortcutMetadata}`;
+    
+    console.log('🔍 [OneLakeStorageClient.getPathMetadata] Request details:', {
+      workspaceId,
+      path,
+      recursive,
+      url
+    });
+    
     try {
       const accessToken = await this.getAccessToken();
+      
+      // 🔍 DIAGNOSTIC: Log token details for debugging
+      console.log('🔍 [OneLakeStorageClient.getPathMetadata] Token acquisition details:', {
+        requestedScopes: `${FABRIC_BASE_SCOPES.ONELAKE_STORAGE} ${FABRIC_BASE_SCOPES.ONELAKE_READ}`,
+        tokenReceived: !!accessToken?.token,
+        tokenLength: accessToken?.token?.length
+      });
+      
+      // 🔍 DIAGNOSTIC: Decode token to inspect claims (first 3 segments only for safety)
+      if (accessToken?.token) {
+        try {
+          const tokenParts = accessToken.token.split('.');
+          if (tokenParts.length === 3) {
+            const payload = JSON.parse(atob(tokenParts[1]));
+            console.log('🔍 [OneLakeStorageClient.getPathMetadata] Token claims:', {
+              audience: payload.aud,
+              scopes: payload.scp,
+              appId: payload.appid,
+              userId: payload.oid || payload.sub,
+              upn: payload.upn,
+              expires: payload.exp ? new Date(payload.exp * 1000).toISOString() : 'unknown',
+              issuedAt: payload.iat ? new Date(payload.iat * 1000).toISOString() : 'unknown'
+            });
+            
+            // Check if required scopes are present
+            const hasStorageScope = payload.aud?.includes('storage.azure.com');
+            const hasFabricScope = payload.scp?.includes('OneLake.Read') || payload.scp?.includes('Item.Read');
+            console.log('🔍 [OneLakeStorageClient.getPathMetadata] Scope verification:', {
+              hasStorageScope,
+              hasFabricScope,
+              warning: (!hasStorageScope || !hasFabricScope) ? 'Missing required scopes!' : 'OK'
+            });
+          }
+        } catch (decodeError) {
+          console.warn('🔍 [OneLakeStorageClient.getPathMetadata] Could not decode token:', decodeError);
+        }
+      }
+      
       const response = await fetch(url, {
         headers: { Authorization: `Bearer ${accessToken.token}` }
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      // 🔍 DIAGNOSTIC: Log response details
+      console.log('🔍 [OneLakeStorageClient.getPathMetadata] Response details:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: {
+          'content-type': response.headers.get('content-type'),
+          'x-ms-request-id': response.headers.get('x-ms-request-id'),
+          'x-ms-error-code': response.headers.get('x-ms-error-code'),
+          'www-authenticate': response.headers.get('www-authenticate')
+        }
+      });
+      
+      if (!response.ok) {
+        // Try to get detailed error information from response body
+        let errorDetails = '';
+        try {
+          errorDetails = await response.text();
+          console.error('🔍 [OneLakeStorageClient.getPathMetadata] Error response body:', errorDetails);
+        } catch (e) {
+          console.error('🔍 [OneLakeStorageClient.getPathMetadata] Could not read error body');
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}${errorDetails ? ` - ${errorDetails}` : ''}`);
+      }
+      
       const paths: OneLakeStorageContainerMetadata = await response.json();
+      console.log('🔍 [OneLakeStorageClient.getPathMetadata] Success:', {
+        pathCount: paths.paths?.length || 0
+      });
       return paths;
     } catch (ex: any) {
-      console.error(`getPathList failed: ${ex.message}`);
+      console.error(`🔍 [OneLakeStorageClient.getPathMetadata] FAILED for path: ${path}`, {
+        error: ex.message,
+        stack: ex.stack
+      });
       throw ex;
     }
   }

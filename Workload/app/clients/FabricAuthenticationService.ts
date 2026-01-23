@@ -50,9 +50,20 @@ export class FabricAuthenticationService {
       throw new Error('WorkloadClientAPI is required for user token authentication');
     }
     
-    return this.workloadClient.auth.acquireFrontendAccessToken({ 
-      scopes: scopes?.length ? scopes.split(' ') : [] 
-    });
+    console.log('🔍 [FabricAuthenticationService.acquireUserToken] Requesting token with scopes:', scopes);
+    console.log('🔍 [FabricAuthenticationService.acquireUserToken] Scopes array:', scopes?.length ? scopes.split(' ') : []);
+    
+    try {
+      const token = await this.workloadClient.auth.acquireFrontendAccessToken({ 
+        scopes: scopes?.length ? scopes.split(' ') : [] 
+      });
+      
+      console.log('🔍 [FabricAuthenticationService.acquireUserToken] Token acquired successfully');
+      return token;
+    } catch (error) {
+      console.error('🔍 [FabricAuthenticationService.acquireUserToken] Token acquisition failed:', error);
+      throw error;
+    }
   }
 
   /**
