@@ -55,11 +55,8 @@ export function DbtDocsItemDefaultView({
     return trimmed.replace(/\/$/, "");
   }, [docsFolder]);
 
-  const resolvedSourceItem = sourceItem || (item ? {
-    id: item.id,
-    workspaceId: item.workspaceId,
-    displayName: item.displayName || t("DbtDocsItemConfig_SourceFallback", "Current item")
-  } : undefined);
+  // Don't fallback to current item - let OneLakeView show "Select Item" empty state
+  const resolvedSourceItem = sourceItem;
 
   const isDocsReady = Boolean(docsPath);
 

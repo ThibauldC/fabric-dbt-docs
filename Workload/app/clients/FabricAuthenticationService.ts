@@ -50,18 +50,26 @@ export class FabricAuthenticationService {
       throw new Error('WorkloadClientAPI is required for user token authentication');
     }
     
+    const scopesArray = scopes?.length ? scopes.split(' ') : [];
     console.log('🔍 [FabricAuthenticationService.acquireUserToken] Requesting token with scopes:', scopes);
-    console.log('🔍 [FabricAuthenticationService.acquireUserToken] Scopes array:', scopes?.length ? scopes.split(' ') : []);
+    console.log('🔍 [FabricAuthenticationService.acquireUserToken] Scopes array:', scopesArray);
+    console.log('🔍 [FabricAuthenticationService.acquireUserToken] WorkloadClient available:', !!this.workloadClient);
     
     try {
       const token = await this.workloadClient.auth.acquireFrontendAccessToken({ 
-        scopes: scopes?.length ? scopes.split(' ') : [] 
+        scopes: scopesArray
       });
       
       console.log('🔍 [FabricAuthenticationService.acquireUserToken] Token acquired successfully');
+      console.log('🔍 [FabricAuthenticationService.acquireUserToken] Token length:', token?.token?.length || 0);
       return token;
     } catch (error) {
       console.error('🔍 [FabricAuthenticationService.acquireUserToken] Token acquisition failed:', error);
+      console.error('🔍 [FabricAuthenticationService.acquireUserToken] Error type:', typeof error);
+      console.error('🔍 [FabricAuthenticationService.acquireUserToken] Error keys:', error ? Object.keys(error) : 'null');
+      console.error('🔍 [FabricAuthenticationService.acquireUserToken] Error message:', error?.message);
+      console.error('🔍 [FabricAuthenticationService.acquireUserToken] Error stack:', error?.stack);
+      console.error('🔍 [FabricAuthenticationService.acquireUserToken] Error JSON:', JSON.stringify(error, null, 2));
       throw error;
     }
   }
