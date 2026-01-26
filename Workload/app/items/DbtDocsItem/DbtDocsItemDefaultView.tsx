@@ -57,12 +57,31 @@ export function DbtDocsItemDefaultView({
 
   // Don't fallback to current item - let OneLakeView show "Select Item" empty state
   const resolvedSourceItem = sourceItem;
-
   const isDocsReady = Boolean(docsPath);
+  
+  console.log('🔍 [DbtDocsItemDefaultView] Current state:', {
+    hasSourceItem: !!sourceItem,
+    sourceItemId: sourceItem?.id,
+    sourceItemName: sourceItem?.displayName,
+    hasDocsFolder: !!docsFolder,
+    docsFolder: docsFolder,
+    docsPath: docsPath,
+    hasResolvedSourceItem: !!resolvedSourceItem,
+    isDocsReady: isDocsReady
+  });
 
   useEffect(() => {
     const fetchDocs = async () => {
+      console.log('🔍 [DbtDocsItemDefaultView.useEffect] Docs loading effect triggered:', {
+        hasResolvedSourceItem: !!resolvedSourceItem,
+        resolvedSourceItemId: resolvedSourceItem?.id,
+        hasDocsPath: !!docsPath,
+        docsPath: docsPath,
+        willAttemptLoad: !!(resolvedSourceItem && docsPath)
+      });
+      
       if (!resolvedSourceItem || !docsPath) {
+        console.log('🔍 [DbtDocsItemDefaultView.useEffect] Skipping load - missing source or path');
         setHtmlContent("");
         setLoadError("");
         return;
@@ -81,11 +100,30 @@ export function DbtDocsItemDefaultView({
         const manifestPath = `${docsPath}/${MANIFEST_FILE_NAME}`;
         const catalogPath = `${docsPath}/${CATALOG_FILE_NAME}`;
 
+        console.log('🔍 [DbtDocsItemDefaultView] Checking for files:', {
+          sourceItemId: resolvedSourceItem.id,
+          sourceItemWorkspaceId: resolvedSourceItem.workspaceId,
+          sourceItemName: resolvedSourceItem.displayName,
+          docsPath,
+          htmlPath,
+          manifestPath,
+          catalogPath,
+          fullHtmlPath: wrapper.getPath(htmlPath),
+          fullManifestPath: wrapper.getPath(manifestPath),
+          fullCatalogPath: wrapper.getPath(catalogPath)
+        });
+
         const [htmlExists, manifestExists, catalogExists] = await Promise.all([
           wrapper.checkIfFileExists(htmlPath),
           wrapper.checkIfFileExists(manifestPath),
           wrapper.checkIfFileExists(catalogPath)
         ]);
+
+        console.log('🔍 [DbtDocsItemDefaultView] File existence check results:', {
+          htmlExists,
+          manifestExists,
+          catalogExists
+        });
 
         if (!htmlExists || !manifestExists || !catalogExists) {
           const missing = [
@@ -172,14 +210,26 @@ export function DbtDocsItemDefaultView({
             }}
             callbacks={{
               onFileSelected: async (fileName, oneLakeLink) => {
+                console.log('🔍 [DbtDocsItemDefaultView] File selected in OneLakeView:', {
+                  fileName,
+                  oneLakeLink
+                });
                 if (fileName.endsWith(INDEX_FILE_NAME)) {
-                  const folder = oneLakeLink
-                    .replace(/\/index\.html$/, "")
-                    .replace(/\/Files\//, "Files/");
-                  onDocsFolderChange(folder);
+                  // OneLake link format: workspaceId/itemId/Files/dbt-docs/index.html
+                  // We need to extract just: Files/dbt-docs
+                  const parts = oneLakeLink.split('/');
+                  // Remove workspaceId (parts[0]) and itemId (parts[1]) and filename (last)
+                  if (parts.length >= 4) {
+                    // Remove first 2 parts (workspace/item) and last part (filename)
+                    const relativeParts = parts.slice(2, -1);
+                    const folder = relativeParts.join('/');
+                    console.log('🔍 [DbtDocsItemDefaultView] Extracted folder path:', folder);
+                    onDocsFolderChange(folder);
+                  }
                 }
               },
               onItemChanged: async (selectedItem) => {
+                console.log('🔍 [DbtDocsItemDefaultView] Source item changed:', selectedItem);
                 onSourceItemChange(selectedItem);
               }
             }}

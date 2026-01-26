@@ -42,12 +42,30 @@ export class OneLakeStorageClient extends FabricPlatformClient {
    * @returns Promise<boolean>
    */
   async checkIfFileExists(filePath: string): Promise<boolean> {
-    const url = `${EnvironmentConstants.OneLakeDFSBaseUrl}/${filePath}?resource=file`;
+    const url = `${EnvironmentConstants.OneLakeDFSBaseUrl}/${filePath}?action=getStatus`;
+    const startTime = Date.now();
+    console.log('🔍 [OneLakeStorageClient.checkIfFileExists] Starting check:', {
+      filePath,
+      url
+    });
     try {
       const accessToken = await this.getAccessToken();
+      console.log('🔍 [OneLakeStorageClient.checkIfFileExists] Token acquired:', {
+        filePath,
+        tokenLength: accessToken?.token?.length || 0,
+        elapsedMs: Date.now() - startTime
+      });
       const response = await fetch(url, {
         method: "HEAD",
         headers: { Authorization: `Bearer ${accessToken.token}` }
+      });
+      console.log('🔍 [OneLakeStorageClient.checkIfFileExists] Response:', {
+        filePath,
+        status: response.status,
+        statusText: response.statusText,
+        requestId: response.headers.get('x-ms-request-id'),
+        errorCode: response.headers.get('x-ms-error-code'),
+        elapsedMs: Date.now() - startTime
       });
       if (response.status === 200) {
         return true;
