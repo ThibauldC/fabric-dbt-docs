@@ -58,8 +58,8 @@ export function DbtDocsItemDefaultView({
   // Don't fallback to current item - let OneLakeView show "Select Item" empty state
   const resolvedSourceItem = sourceItem;
   const isDocsReady = Boolean(docsPath);
-  
-  console.log('🔍 [DbtDocsItemDefaultView] Current state:', {
+
+  console.log("🔍 [DbtDocsItemDefaultView] Current state:", {
     hasSourceItem: !!sourceItem,
     sourceItemId: sourceItem?.id,
     sourceItemName: sourceItem?.displayName,
@@ -72,16 +72,16 @@ export function DbtDocsItemDefaultView({
 
   useEffect(() => {
     const fetchDocs = async () => {
-      console.log('🔍 [DbtDocsItemDefaultView.useEffect] Docs loading effect triggered:', {
+      console.log("🔍 [DbtDocsItemDefaultView.useEffect] Docs loading effect triggered:", {
         hasResolvedSourceItem: !!resolvedSourceItem,
         resolvedSourceItemId: resolvedSourceItem?.id,
         hasDocsPath: !!docsPath,
         docsPath: docsPath,
         willAttemptLoad: !!(resolvedSourceItem && docsPath)
       });
-      
+
       if (!resolvedSourceItem || !docsPath) {
-        console.log('🔍 [DbtDocsItemDefaultView.useEffect] Skipping load - missing source or path');
+        console.log("🔍 [DbtDocsItemDefaultView.useEffect] Skipping load - missing source or path");
         setHtmlContent("");
         setLoadError("");
         return;
@@ -100,7 +100,7 @@ export function DbtDocsItemDefaultView({
         const manifestPath = `${docsPath}/${MANIFEST_FILE_NAME}`;
         const catalogPath = `${docsPath}/${CATALOG_FILE_NAME}`;
 
-        console.log('🔍 [DbtDocsItemDefaultView] Checking for files:', {
+        console.log("🔍 [DbtDocsItemDefaultView] Checking for files:", {
           sourceItemId: resolvedSourceItem.id,
           sourceItemWorkspaceId: resolvedSourceItem.workspaceId,
           sourceItemName: resolvedSourceItem.displayName,
@@ -119,7 +119,7 @@ export function DbtDocsItemDefaultView({
           wrapper.checkIfFileExists(catalogPath)
         ]);
 
-        console.log('🔍 [DbtDocsItemDefaultView] File existence check results:', {
+        console.log("🔍 [DbtDocsItemDefaultView] File existence check results:", {
           htmlExists,
           manifestExists,
           catalogExists
@@ -130,7 +130,9 @@ export function DbtDocsItemDefaultView({
             htmlExists ? null : INDEX_FILE_NAME,
             manifestExists ? null : MANIFEST_FILE_NAME,
             catalogExists ? null : CATALOG_FILE_NAME
-          ].filter(Boolean).join(", ");
+          ]
+            .filter(Boolean)
+            .join(", ");
           setHtmlContent("");
           setLoadError(
             t("DbtDocsItemDocs_MissingFiles", "Missing required docs files: {{files}}", {
@@ -140,10 +142,26 @@ export function DbtDocsItemDefaultView({
           return;
         }
 
-        const html = await wrapper.readFileAsText(htmlPath);
+        const [html, manifestJson, catalogJson] = await Promise.all([
+          wrapper.readFileAsText(htmlPath),
+          wrapper.readFileAsText(manifestPath),
+          wrapper.readFileAsText(catalogPath)
+        ]);
+
+        const injectedFetchOverride = `\n<script>\n(function(){\n  const manifestText = ${JSON.stringify(manifestJson)};\n  const catalogText = ${JSON.stringify(catalogJson)};\n  const originalFetch = window.fetch ? window.fetch.bind(window) : null;\n  const originalXhrOpen = window.XMLHttpRequest && window.XMLHttpRequest.prototype.open;\n  const originalXhrSend = window.XMLHttpRequest && window.XMLHttpRequest.prototype.send;\n  function matchesDocsJson(url){\n    if (!url) return null;\n    if (url.includes('manifest.json')) return { body: manifestText, contentType: 'application/json' };\n    if (url.includes('catalog.json')) return { body: catalogText, contentType: 'application/json' };\n    return null;\n  }\n  window.fetch = function(input, init){\n    const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');\n    const match = matchesDocsJson(url);\n    if (match) {\n      return Promise.resolve(new Response(match.body, { headers: { 'Content-Type': match.contentType } }));\n    }\n    return originalFetch ? originalFetch(input, init) : Promise.reject(new Error('fetch unavailable'));
+  };\n  if (originalXhrOpen && originalXhrSend) {\n    window.XMLHttpRequest.prototype.open = function(method, url){\n      this.__dbtDocsUrl = url;\n      return originalXhrOpen.apply(this, arguments);\n    };\n    window.XMLHttpRequest.prototype.send = function(){\n      const match = matchesDocsJson(this.__dbtDocsUrl);\n      if (match) {\n        const xhr = this;\n        setTimeout(function(){\n          Object.defineProperty(xhr, 'readyState', { value: 4, configurable: true });\n          Object.defineProperty(xhr, 'status', { value: 200, configurable: true });\n          Object.defineProperty(xhr, 'responseText', { value: match.body, configurable: true });\n          Object.defineProperty(xhr, 'response', { value: match.body, configurable: true });\n          if (xhr.onreadystatechange) xhr.onreadystatechange();\n          if (xhr.onload) xhr.onload();\n        }, 0);
+        return;
+      }\n      return originalXhrSend.apply(this, arguments);\n    };\n  }\n})();\n</script>\n`;
+
         let normalized = html
           .replace(/manifest\.json/g, `${docsPath}/${MANIFEST_FILE_NAME}`)
           .replace(/catalog\.json/g, `${docsPath}/${CATALOG_FILE_NAME}`);
+
+        if (normalized.includes("<head>")) {
+          normalized = normalized.replace("<head>", `<head>${injectedFetchOverride}`);
+        } else {
+          normalized = injectedFetchOverride + normalized;
+        }
 
         setHtmlContent(normalized);
       } catch (error) {
@@ -160,9 +178,7 @@ export function DbtDocsItemDefaultView({
   const leftPanel = (
     <div className="dbt-docs-view">
       <div className="dbt-docs-section">
-        <h2 className="dbt-docs-section-title">
-          {t("DbtDocsItemConfig_Title", "Docs source")}
-        </h2>
+        <h2 className="dbt-docs-section-title">{t("DbtDocsItemConfig_Title", "Docs source")}</h2>
         <p className="dbt-docs-section-description">
           {t(
             "DbtDocsItemConfig_Description",
@@ -178,7 +194,10 @@ export function DbtDocsItemDefaultView({
 
         <Field
           label={t("DbtDocsItemConfig_SourceLabel", "OneLake item")}
-          hint={resolvedSourceItem?.displayName || t("DbtDocsItemConfig_SourceHint", "Select the item that contains your docs")}
+          hint={
+            resolvedSourceItem?.displayName ||
+            t("DbtDocsItemConfig_SourceHint", "Select the item that contains your docs")
+          }
         />
         <Field label={t("DbtDocsItemConfig_PathLabel", "Docs folder path")}>
           <Input
@@ -187,18 +206,12 @@ export function DbtDocsItemDefaultView({
             placeholder={t("DbtDocsItemConfig_PathPlaceholder", "Files/dbt-docs")}
           />
         </Field>
-        <Button
-          appearance="primary"
-          className="dbt-docs-save-button"
-          onClick={onSaveRequested}
-        >
+        <Button appearance="primary" className="dbt-docs-save-button" onClick={onSaveRequested}>
           {t("DbtDocsItemConfig_SaveButton", "Save path")}
         </Button>
       </div>
       <div className="dbt-docs-section">
-        <h3 className="dbt-docs-section-subtitle">
-          {t("DbtDocsItemBrowser_Title", "Browse OneLake")}
-        </h3>
+        <h3 className="dbt-docs-section-subtitle">{t("DbtDocsItemBrowser_Title", "Browse OneLake")}</h3>
         <div className="dbt-docs-onelake-view">
           <OneLakeView
             workloadClient={workloadClient}
@@ -210,26 +223,26 @@ export function DbtDocsItemDefaultView({
             }}
             callbacks={{
               onFileSelected: async (fileName, oneLakeLink) => {
-                console.log('🔍 [DbtDocsItemDefaultView] File selected in OneLakeView:', {
+                console.log("🔍 [DbtDocsItemDefaultView] File selected in OneLakeView:", {
                   fileName,
                   oneLakeLink
                 });
                 if (fileName.endsWith(INDEX_FILE_NAME)) {
                   // OneLake link format: workspaceId/itemId/Files/dbt-docs/index.html
                   // We need to extract just: Files/dbt-docs
-                  const parts = oneLakeLink.split('/');
+                  const parts = oneLakeLink.split("/");
                   // Remove workspaceId (parts[0]) and itemId (parts[1]) and filename (last)
                   if (parts.length >= 4) {
                     // Remove first 2 parts (workspace/item) and last part (filename)
                     const relativeParts = parts.slice(2, -1);
-                    const folder = relativeParts.join('/');
-                    console.log('🔍 [DbtDocsItemDefaultView] Extracted folder path:', folder);
+                    const folder = relativeParts.join("/");
+                    console.log("🔍 [DbtDocsItemDefaultView] Extracted folder path:", folder);
                     onDocsFolderChange(folder);
                   }
                 }
               },
               onItemChanged: async (selectedItem) => {
-                console.log('🔍 [DbtDocsItemDefaultView] Source item changed:', selectedItem);
+                console.log("🔍 [DbtDocsItemDefaultView] Source item changed:", selectedItem);
                 onSourceItemChange(selectedItem);
               }
             }}
@@ -243,9 +256,7 @@ export function DbtDocsItemDefaultView({
     <div className="dbt-docs-view">
       <div className="dbt-docs-preview-header">
         <div>
-          <h1 className="dbt-docs-title">
-            {t("DbtDocsItemPreview_Title", "dbt Docs")}
-          </h1>
+          <h1 className="dbt-docs-title">{t("DbtDocsItemPreview_Title", "dbt Docs")}</h1>
           <p className="dbt-docs-subtitle">
             {resolvedSourceItem && docsPath
               ? t("DbtDocsItemPreview_Subtitle", "Showing docs from {{path}}", { path: docsPath })
@@ -264,9 +275,7 @@ export function DbtDocsItemDefaultView({
       <Card className="dbt-docs-preview-card">
         {(!resolvedSourceItem || !isDocsReady) && (
           <div className="dbt-docs-placeholder">
-            <Text>
-              {t("DbtDocsItemPreview_Empty", "Choose a docs folder to render the documentation.")}
-            </Text>
+            <Text>{t("DbtDocsItemPreview_Empty", "Choose a docs folder to render the documentation.")}</Text>
           </div>
         )}
         {resolvedSourceItem && isDocsReady && !isLoadingDocs && !loadError && (
